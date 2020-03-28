@@ -17,10 +17,10 @@ use \Telbot\InputHandle as InputHandle;
 use \Telbot\Chat as Chat;
 
 $data = json_decode(file_get_contents('php://input'));
-$bot = new Bot('1009655071:AAEoB3-DO74_FLnc4K9osmrYHf3XEGHVc-g');
+$bot = new Bot();
 $ih = new InputHandle();
 $bot->enableSql();
-$DBH = new PDO('mysql:host=us-cdbr-iron-east-05.cleardb.net;charset=utf8;dbname=heroku_75918dcf01cbce3', 'be76b1edb6932d', '38023b9d');
+$DBH = new PDO();
 $bot->externalPdo($DBH);
 
 $userId = $ih->getUserId();
@@ -30,7 +30,6 @@ $message = $ih->getMessageText();
 
 require_once('User.php');
 require_once('Weapon.php');
-require_once('Potion.php');
 require_once('Dungeon.php');
 require_once('Adventure.php');
 
@@ -85,6 +84,9 @@ if(Context::read($bot, $userId) == 'in_adventure' && ($ih->getCallBackData() != 
 			'chat_id' => $ih->getChatId(),
 			'text' => 'Вы не можете сделать этого находясь в подземелии!'
 		]);
+		Inquiry::send($bot, 'answerCallbackQuery', [
+					'callback_query_id' => $ih->getCallBackQueryId()
+				]);
 		die();
 }
 switch($ih->getQueryType()){
@@ -94,8 +96,8 @@ switch($ih->getQueryType()){
 			$matches;
 			preg_match("/start_new_dungeon_([1-9]+)/",$ih->getCallBackData(), $matches);
 			$dungeon = findDungeonById($matches[1]);
-			Inquiry::send($bot, 'sendMessage' , [
-						'chat_id' => $ih->getChatId(),
+			Inquiry::send($bot, 'answerCallbackQuery' , [
+						'callback_query_id' => $ih->getCallBackQueryId(),
 						'text' => 'Вы вошли в подземелие...'
 					]);
 			newAdventure($matches[1]);
@@ -125,30 +127,39 @@ switch($ih->getQueryType()){
 						'text' => 'Ты уверен?Это покупка обойдется тебе в '.findWeaponToSell($user['level'])['cost'].' монет.',
 						'reply_markup' => Utils::buildInlineKeyboard([[['Да, абсолютно.', 'buy_weapon_confirm'], ['Нет, еще подумаю.', 'buy_weapon_cancel']]])
 					]);
+				Inquiry::send($bot, 'answerCallbackQuery', [
+					'callback_query_id' => $ih->getCallBackQueryId()
+					]);
 			break;
 			case 'buy_weapon_confirm':
-			if($weapon['level'] <= findWeaponToSell($user['level'])['level'] && getMoney() >= findWeaponToSell($user['level'])['cost']){
-				subMoney(findWeaponToSell($user['level'])['cost']);
-				setWeapon(findWeaponToSell($user['level'])['id']);
-			}else{
-				Inquiry::send($bot, 'sendMessage' , [
-						'chat_id' => $ih->getChatId(),
-						'text' => 'Данный предмет недоступен к покупке.'
+				if($weapon['level'] <= findWeaponToSell($user['level'])['level'] && getMoney() >= findWeaponToSell($user['level'])['cost']){
+					subMoney(findWeaponToSell($user['level'])['cost']);
+					setWeapon(findWeaponToSell($user['level'])['id']);
+				}else{
+					Inquiry::send($bot, 'answerCallbackQuery' , [
+							'callback_query_id' => $ih->getCallBackQueryId(),
+							'text' => 'Данный предмет недоступен к покупке.'
+						]);
+				}
+				Inquiry::send($bot, 'answerCallbackQuery', [
+						'callback_query_id' => $ih->getCallBackQueryId()
 					]);
-			}
 			break;
 			case 'buy_weapon_cancel':
-				Inquiry::send($bot, 'sendMessage' , [
-						'chat_id' => $ih->getChatId(),
+				Inquiry::send($bot, 'answerCallbackQuery' , [
+						'callback_query_id' => $ih->getCallBackQueryId(),
 						'text' => 'Окей, тогда как будешь уверен, приходи!'
 					]);
 			break;
 			case 'upgrade_weapon':
 				if($user['money'] >= ($user['weaponLevel'] + 1 * getWeaponLevel()) * 10 && $user['weaponLevel'] < $weapon['maxLevel']){
 					increaseWeaponLevel();
+					Inquiry::send($bot, 'answerCallbackQuery', [
+						'callback_query_id' => $ih->getCallBackQueryId()
+					]);
 				}else{
-					Inquiry::send($bot, 'sendMessage' , [
-							'chat_id' => $ih->getChatId(),
+					Inquiry::send($bot, 'answerCallbackQuery' , [
+							'callback_query_id' => $ih->getCallBackQueryId(),
 							'text' => 'У вас не хватает денег на улучшение данного предмета либо данный предмет достиг своего максимального уровня.'
 						]);
 				}
@@ -168,6 +179,9 @@ switch($ih->getQueryType()){
 						'text' => 'Что хотите приобрести?'
 					]);
 				}
+				Inquiry::send($bot, 'answerCallbackQuery', [
+					'callback_query_id' => $ih->getCallBackQueryId()
+					]);
 			break;
 			case 'max_weapon_level':
 				Inquiry::send($bot, 'sendMessage' , [
@@ -181,10 +195,13 @@ switch($ih->getQueryType()){
 							'chat_id' => $ih->getChatId(),
 							'text' => 'Вы не в подземелии.'
 						]);
+					Inquiry::send($bot, 'answerCallbackQuery', [
+						'callback_query_id' => $ih->getCallBackQueryId()
+					]);
 					die();
 				}
-				Inquiry::send($bot, 'sendMessage' , [
-							'chat_id' => $ih->getChatId(),
+				Inquiry::send($bot, 'answerCallbackQuery' , [
+							'callback_query_id' => $ih->getCallBackQueryId(),
 							'text' => 'Вы пошли дальше в подземелие'
 						]);
 				$adventure = findAdventure();
@@ -235,8 +252,8 @@ switch($ih->getQueryType()){
 				$mob['damage'] = round($mob['damage'],1, PHP_ROUND_HALF_UP);
 				$mobHealth -= $weaponDamage;
 				if($mobHealth > 0){
-					Inquiry::send($bot, 'sendMessage' , [
-							'chat_id' => $ih->getChatId(),
+					Inquiry::send($bot, 'answerCallbackQuery' , [
+							'callback_query_id' => $ih->getCallBackQueryId(),
 							'text' => 'Вы атаковали монстра.У него осталось '.$mobHealth.' хп'
 						]);
 					$hp -= $mob['damage'];
@@ -257,6 +274,9 @@ switch($ih->getQueryType()){
 							]);
 				}else{
 					updateAdventure($mob['money'], $expErning, $hp,1, 0,  0);
+					Inquiry::send($bot, 'answerCallbackQuery', [
+					'callback_query_id' => $ih->getCallBackQueryId()
+					]);
 					Inquiry::send($bot, 'sendMessage' , [
 							'chat_id' => $ih->getChatId(),
 							'text' => "Вы убили монстра.У вас осталось $hp хп.",
@@ -271,11 +291,17 @@ switch($ih->getQueryType()){
 					addExp($adventure['exp']);
 					deleteAdventure();
 					Context::delete($bot, $userId);
+					Inquiry::send($bot, 'answerCallbackQuery', [
+					'callback_query_id' => $ih->getCallBackQueryId()
+					]);
 				}else{
 					Inquiry::send($bot, 'sendMessage' , [
 							'chat_id' => $ih->getChatId(),
 							'text' => "Неизвестная ошибка"
 						]);
+					Inquiry::send($bot, 'answerCallbackQuery', [
+						'callback_query_id' => $ih->getCallBackQueryId()
+					]);	
 				}
 			break;
 		}

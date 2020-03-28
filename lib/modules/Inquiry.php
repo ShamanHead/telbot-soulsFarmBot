@@ -32,7 +32,8 @@ class Inquiry {
 		           'getchatmemberscount',
 		           'getme',
 		           'sendchataction',
-		           'sendInvoice'
+		           'sendInvoice',
+		           'answercallbackquery'
 		];
 
 		$url = 'https://api.telegram.org/bot'.$bot->getToken().'/'.$method.'?';
