@@ -17,10 +17,10 @@ use \Telbot\InputHandle as InputHandle;
 use \Telbot\Chat as Chat;
 
 $data = json_decode(file_get_contents('php://input'));
-$bot = new Bot();
+$bot = new Bot('1009655071:AAEoB3-DO74_FLnc4K9osmrYHf3XEGHVc-g');
 $ih = new InputHandle();
 $bot->enableSql();
-$DBH = new PDO();
+$DBH = new PDO('mysql:host=us-cdbr-iron-east-05.cleardb.net;charset=utf8;dbname=heroku_75918dcf01cbce3', 'be76b1edb6932d', '38023b9d');
 $bot->externalPdo($DBH);
 
 $userId = $ih->getUserId();
@@ -35,7 +35,7 @@ require_once('Dungeon.php');
 require_once('Adventure.php');
 
 $mainKeyboard = Utils::buildKeyboard([[['🏘Город'], ['💪Мой персонаж'], ['🧟‍♀️Подземелье']]], true, true);
-$cityKeyboard = Utils::buildKeyboard([[['🏪Магазин'], ['🍻Паб'], ['🛠Кузница']], [['❌Выйти из города']]], true, true);
+$cityKeyboard = Utils::buildKeyboard([[['🛠Кузница']], [['❌Выйти из города']]], true, true);
 $user = getUser();
 $levelFormula = $user['level'] * 15;
 $weapon = findWeaponById($user['weaponId']);
@@ -142,16 +142,6 @@ switch($ih->getQueryType()){
 						'chat_id' => $ih->getChatId(),
 						'text' => 'Окей, тогда как будешь уверен, приходи!'
 					]);
-			break;
-			case 'buy_heal_potion':
-				if($user['money'] >= 2){
-					newPotion(2);
-				}else{
-					Inquiry::send($bot, 'sendMessage' , [
-							'chat_id' => $ih->getChatId(),
-							'text' => 'У вас не хватает денег на покупку данного предмета.'
-						]);
-				}
 			break;
 			case 'upgrade_weapon':
 				if($user['money'] >= ($user['weaponLevel'] + 1 * getWeaponLevel()) * 10 && $user['weaponLevel'] < $weapon['maxLevel']){
@@ -313,14 +303,6 @@ switch($ih->getQueryType()){
 								'text' => print_r(findDungeonByLevel($user['level']), true)
 							]);
 			break;
-			case '🏪Магазин':
-				$keyboard = Utils::buildInlineKeyboard([[['Купить лечебное зелье(2 монет)', 'buy_heal_potion']]]);
-						Inquiry::send($bot, 'sendMessage' , [
-							'chat_id' => $ih->getChatId(),
-							'text' => "Добро пожаловать в магазин, охотник!\nЧем я могу тебе помочь?",
-							'reply_markup' => $keyboard
-						]);
-			break;
 			case '🛠Кузница':
 				$weapon = findWeaponToSell($user['level']);
 				if($user['weaponLevel'] >= $weapon['maxLevel']){
@@ -332,12 +314,6 @@ switch($ih->getQueryType()){
 							'chat_id' => $ih->getChatId(),
 							'text' => "Привет, я Джо!Добро пожаловать в кузницу.Здесь ты можешь приобрести оружие и броню за хорошую цену!.",
 							'reply_markup' => Utils::buildInlineKeyboard([[["Покупка аммуниции", 'buy_weapon_catalog']], $upgrade])
-						]);
-			break;
-			case '🍻Паб':
-				Inquiry::send($bot, 'sendMessage' , [
-							'chat_id' => $ih->getChatId(),
-							'text' => "Не думаю что мне пока стоит идти туда."
 						]);
 			break;
 			case '🏘Город':
